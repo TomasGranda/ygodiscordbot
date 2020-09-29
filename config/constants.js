@@ -1,3 +1,7 @@
-export const commandPrefix = "y!";
+export const COMMAND_PREFIX = "y!";
 
-export const tournamentCommand = "tr";
+// Tournament Status
+export const JOIN_PHASE_STATUS = "join_phase";
+export const PAUSED_STATUS = "paused";
+export const STARTED_STATUS = "started";
+export const FINISHED_STATUS = "finished";

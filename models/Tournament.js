@@ -1,34 +1,44 @@
-class Tournament {
+import mongoose from 'mongoose';
+import { JOIN_PHASE_STATUS } from '../config/constants.js';
 
-    BYE_POINTS = 2;
-    WIN_POINTS = 3;
-    LOSE_POINTS = 1;
+export const TournamentSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+    },
+    rounds: {
+        type: Number,
+        min: 0,
+        required: true,
+        default: 3,
+    },
+    competitors: {
+        type: [mongoose.Types.Mixed],
+    },
+    winPoints: {
+        type: Number,
+        default: 3,
+    },
+    byePoints: {
+        type: Number,
+        default: 2,
+    },
+    currentRound: {
+        type: Number,
+        default: 0
+    },
+    status: {
+        type: String,
+        default: JOIN_PHASE_STATUS,
+    },
+    discordServerId: {
+        type: String,
+        required: true,
+    },
+    customRoundsNumber: {
+        type: Boolean,
+        default: false,
+    },
+});
 
-    currentRound = 0;
-
-    name = "";
-    rounds = 0;
-    competitors = [];
-
-    constructor(name, rounds) {
-        this.name = name;
-        this.rounds = rounds;
-    }
-
-    addCompetitor(competitor) {
-        competitor.push(competitor);
-    }
-
-    startTournament() {
-        currentRound = 1;
-    }
-
-    startNextRound() {
-        this.currentRound++;
-    }
-
-    getPositions() {
-        return this.competitors.sort((a, b) => b.points - a.points);
-    }
-
-}
+export const Tournament = mongoose.model('Tournament', TournamentSchema);

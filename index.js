@@ -1,5 +1,24 @@
-const Discord = require('discord.js');
-const { commandPrefix, tournamentCommand } = require('./config/constants');
+import Discord from 'discord.js';
+import { COMMAND_PREFIX } from './config/constants.js';
+import { TOURNAMENT_COMMAND, handleTournamentCommand } from './commands/TournamentCommandHandler.js';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+
+dotenv.config();
+
+if (!process.env.MONGO_URI) {
+  console.error('Cannot read Mongo Uri');
+  process.exit();
+}
+
+mongoose
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log('MongoDB Connected'))
+  .catch((err) => console.log(err));
+
 const client = new Discord.Client();
 
 client.on('ready', () => {
@@ -7,17 +26,16 @@ client.on('ready', () => {
 });
 
 client.on('message', msg => {
-  if (msg.content.startsWith(commandPrefix)) {
-    const command = msg.split(commandPrefix)[0];
+  if (msg.content.startsWith(COMMAND_PREFIX) && !msg.author.bot) {
+    const command = msg.content.split(COMMAND_PREFIX)[1].split(" ")[0];
 
-
-    if(command.startsWith(tournamentCommand)){
-      const tournamentParams = command.split(tournamentCommand)[0].split(" ");
-
-      
+    switch (command) {
+      case TOURNAMENT_COMMAND:
+        handleTournamentCommand(msg);
+        break;
     }
-    
+
   }
 });
 
-client.login('NzU5ODk4ODQzMTI2MTY5NjMw.X3EM8g.zxkxLqbyF1R6ub335TYSNby6hls');
+client.login(process.env.BOT_TOKEN);
