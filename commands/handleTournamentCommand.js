@@ -5,6 +5,8 @@ import { getFlags } from "../utils/getFlags.js";
 import { flagExists } from "../utils/flagExists.js";
 import { getRoundsNumber } from "../utils/getRoundsNumber.js";
 import Discord from "discord.js";
+import { getMatchMaking } from '../tournamentLogic/getMatchMaking.js'
+import { getActiveTournament } from '../tournamentLogic/getActiveTournament.js'
 
 export const TOURNAMENT_COMMAND = "tr";
 
@@ -29,7 +31,7 @@ const TOURNAMENT_STARTED = "The tournament is currently started... Contact to so
 const TOURNAMENT_ALREADY_STARTED = "The tournament is already started.";
 const TOURNAMENT_STARTED_SETTED = "The tournament has been started.";
 const TOURNAMENT_CANNOT_START_NOT_ENOUGH_COMPETITORS = "Can't start Tournament, Not Enough Competitors.";
-const TOURNAMENT_NOT_FOUND = "There is no tournament currently in this server... Contact to some Admin to start a new one.";
+export const TOURNAMENT_NOT_FOUND = "There is no tournament currently in this server... Contact to some Admin to start a new one.";
 const TOURNAMENT_JOINED = (tournamentName) => `You have joined to ${tournamentName}, Congrats.`
 const TOURNAMENT_ALREADY_JOINED = (tournamentName) => `You are already joined on ${tournamentName}.`
 const TOURNAMENT_CREATED = (tournamentName, status) => `${tournamentName} Tournament has been created in ${status} status.`;
@@ -69,19 +71,8 @@ export const handleTournamentCommand = (msg) => {
         }
     }
 
-    const getActiveTournament = async () => {
-        const tournaments = await getTournaments();
-        const activeTournament = tournaments.find((t) => t.status != FINISHED_STATUS);
-        return activeTournament;
-    }
-
-    const getTournaments = async () => {
-        const tournaments = await Tournament.find((_, t) => t.discordServerId == msg.guild.id);
-        return tournaments;
-    }
-
     const getInfo = async () => {
-        const activeTournament = await getActiveTournament();
+        const activeTournament = await getActiveTournament(msg.guild.id);
 
         if (activeTournament) {
             let Embed = new Discord.MessageEmbed()
@@ -89,10 +80,10 @@ export const handleTournamentCommand = (msg) => {
                 .addField("Current Round", activeTournament.currentRound ? activeTournament.currentRound : "Tournament not started")
                 .addField("Competitors", activeTournament.competitors.length > 0 ? activeTournament.competitors.map(c => c.username).join("\n") : "N/A")
                 .addField("Status", activeTournament.status);
-            if(activeTournament.status != STARTED_STATUS){
+            if (activeTournament.status != STARTED_STATUS) {
                 Embed.addField("Custom Round Number", activeTournament.customRoundsNumber ? "Yes" : "No")
             }
-            if(activeTournament.customRoundsNumber || activeTournament.status == STARTED_STATUS){
+            if (activeTournament.customRoundsNumber || activeTournament.status == STARTED_STATUS) {
                 Embed.addField("Rounds", activeTournament.rounds);
             }
             msg.channel.send(Embed);
@@ -102,7 +93,7 @@ export const handleTournamentCommand = (msg) => {
     }
 
     const finishTournament = async () => {
-        const activeTournament = await getActiveTournament();
+        const activeTournament = await getActiveTournament(msg.guild.id);
 
         if (activeTournament) {
             await activeTournament.remove();
@@ -113,7 +104,7 @@ export const handleTournamentCommand = (msg) => {
     }
 
     const startTournament = async () => {
-        const activeTournament = await getActiveTournament();
+        const activeTournament = await getActiveTournament(msg.guild.id);
 
         if (activeTournament) {
             if (activeTournament.status == STARTED_STATUS) {
@@ -121,12 +112,12 @@ export const handleTournamentCommand = (msg) => {
                 return;
             }
 
-            if(activeTournament.competitors.length <= 1){
+            if (activeTournament.competitors.length <= 1) {
                 msg.reply(TOURNAMENT_CANNOT_START_NOT_ENOUGH_COMPETITORS);
                 return;
             }
 
-            if(activeTournament.currentRound == 0) {
+            if (activeTournament.currentRound == 0) {
                 activeTournament.currentRound = 1;
             }
 
@@ -136,16 +127,33 @@ export const handleTournamentCommand = (msg) => {
                 activeTournament.rounds = getRoundsNumber(activeTournament.competitors.length);
             }
 
+            const competitorsPairs = getMatchMaking(activeTournament.competitors);
+
+            competitorsPairs.forEach((pair) => {
+                pair[0].opponent = pair[1].userId;
+                pair[1].opponent = pair[0].userId;
+            });
+
             await activeTournament.validate();
             await activeTournament.save();
+
+            let matchMaking = new Discord.MessageEmbed()
+                .setTitle(activeTournament.name + " Tournament")
+                .addField("Current Round: ", activeTournament.currentRound, true);
+
+            competitorsPairs.forEach((pair, index) => {
+                matchMaking.addField("Match " + (++index), pair[1] != "" ? `${pair[0].username} vs. ${pair[1].username}` : `${pair[0].username} (BYE)`);
+            });
+
             msg.reply(TOURNAMENT_STARTED_SETTED);
+            msg.reply(matchMaking);
         } else {
             msg.reply(TOURNAMENT_NOT_FOUND);
         }
     }
 
     const pauseTournament = async () => {
-        const activeTournament = await getActiveTournament();
+        const activeTournament = await getActiveTournament(msg.guild.id);
 
         if (activeTournament) {
             if (activeTournament.status == PAUSED_STATUS) {
@@ -162,7 +170,7 @@ export const handleTournamentCommand = (msg) => {
     }
 
     const createNewTournament = async () => {
-        const activeTournament = await getActiveTournament();
+        const activeTournament = await getActiveTournament(msg.guild.id);
 
         if (!activeTournament) {
             Tournament.create({
@@ -184,7 +192,7 @@ export const handleTournamentCommand = (msg) => {
     }
 
     const joinTournament = async () => {
-        const activeTournament = await getActiveTournament();
+        const activeTournament = await getActiveTournament(msg.guild.id);
 
 
         if (!activeTournament) {

@@ -1,6 +1,6 @@
 import Discord from 'discord.js';
 import { COMMAND_PREFIX } from './config/constants.js';
-import { TOURNAMENT_COMMAND, handleTournamentCommand } from './commands/TournamentCommandHandler.js';
+import { TOURNAMENT_COMMAND, handleTournamentCommand } from './commands/handleTournamentCommand.js';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 
@@ -33,6 +33,10 @@ client.on('message', msg => {
       case TOURNAMENT_COMMAND:
         handleTournamentCommand(msg);
         break;
+      case "t":
+        const MatchResult = new Discord.MessageEmbed()
+                .setTitle("Pepe gano el match");
+        msg.reply(MatchResult);
     }
 
   }
